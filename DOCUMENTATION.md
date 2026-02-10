@@ -730,5 +730,3 @@ For issues:
 6. Check that all dependencies installed correctly: `pip show scapy pandas scikit-learn`
 
 ---
-
-**SecureFlux is ready for deployment!** 🚀

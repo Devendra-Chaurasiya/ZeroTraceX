@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZeroTrace-X – Offline CSV Analysis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --accent-primary: #3b82f6;
+            --accent-danger: #ef4444;
+            --accent-success: #10b981;
+            --text-main: #f8fafc;
+            --text-secondary: #94a3b8;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+            padding: 0;
+        }
+
+        /* Navbar */
+        .navbar {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: white !important;
+        }
+
+        .brand-highlight {
+            color: var(--accent-primary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #64748b;
+            /* Neutral for offline */
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h2 {
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .upload-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .dropzone {
+            border: 2px dashed rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 50px 40px;
+            text-align: center;
+            background: rgba(15, 23, 42, 0.5);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 30px;
+        }
+
+        .dropzone:hover,
+        .dropzone.dragover {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: var(--accent-primary);
+        }
+
+        .dropzone .icon {
+            font-size: 3.5rem;
+            margin-bottom: 15px;
+            filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.3));
+        }
+
+        .dropzone h4 {
+            color: white;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .dropzone p {
+            color: var(--text-secondary);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-info {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .file-info.show {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .file-info .filename {
+            font-weight: 600;
+            color: var(--accent-success);
+        }
+
+        .file-info .remove-btn {
+            background: none;
+            border: none;
+            color: #dc3545;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        .analyze-btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            background: var(--accent-primary);
+            border: none;
+            color: white;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .analyze-btn:hover:not(:disabled) {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .analyze-btn:disabled {
+            background: #334155;
+            color: #94a3b8;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .progress-container {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .progress-container.show {
+            display: block;
+        }
+
+        .status-message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .status-message.show {
+            display: block;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .info-section {
+            background: rgba(245, 158, 11, 0.1);
+            border-left: 4px solid var(--severity-medium);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(245, 158, 11, 0.1);
+        }
+
+        .info-section h5 {
+            color: #f59e0b;
+            /* Amber 500 */
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .info-section ul {
+            margin-bottom: 0;
+            color: #cbd5e1;
+        }
+
+        .template-section {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .template-btn {
+            background: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 25px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .template-btn:hover {
+            border-color: var(--accent-primary);
+            color: white;
+            transform: translateY(-2px);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .template-btn .icon {
+            font-size: 1.1rem;
+        }
+
+        .template-help {
+            color: var(--text-secondary);
+            margin-top: 10px;
+            margin-bottom: 0;
+            font-size: 0.9rem;
+        }
+
+
+
+        .results-container {
+            display: none;
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 30px;
+            margin-top: 30px;
+        }
+
+        .results-container.show {
+            display: block;
+        }
+
+        .results-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .results-header h3 {
+            color: white;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .results-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 12px;
+            padding: 20px;
+            flex: 1;
+            min-width: 150px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-card .number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-card.anomalies .number {
+            color: var(--accent-danger);
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+        }
+
+        .stat-card.normal .number {
+            color: var(--accent-success);
+            text-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+        }
+
+        .download-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .download-btn {
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .download-btn.csv {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .download-btn.csv:hover {
+            background: linear-gradient(135deg, #00b8e6, #0066cc);
+            box-shadow: 0 5px 15px rgba(0, 136, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .download-btn.waf {
+            background: var(--accent-danger);
+            color: white;
+        }
+
+        .download-btn.waf:hover {
+            background: linear-gradient(135deg, #ff5252, #e63946);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .download-btn .icon {
+            font-size: 1.3rem;
+        }
+
+        .analyze-another {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .analyze-another button {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .analyze-another button:hover {
+            background: #5a6268;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand" href="/">ZeroTrace<span class="brand-highlight">-X</span></a>
+            <div class="d-flex align-items-center">
+                <span class="text-secondary small me-3"><span class="status-dot"></span>Offline Analysis</span>
+                <a href="/" class="btn btn-sm btn-outline-secondary">← Back to Home</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="header">
+        <h2>📊 Offline CSV Analysis</h2>
+        <p>Upload network flow logs for ML-driven anomaly detection</p>
+    </div>
+
+    <div class="upload-container">
+        <div class="info-section">
+            <h5>📋 CSV Format Requirements</h5>
+            <ul>
+                <li>CSV must contain CICFlowMeter-style network flow features</li>
+                <li>Same format as training data (feature columns must match)</li>
+                <li>Analysis uses Home, Industrial, and Live models (read-only mode)</li>
+                <li>Results include: final_decision, severity, scores, rule_recommendation, explainability</li>
+            </ul>
+        </div>
+
+        <!-- CSV Template Download Section -->
+        <div class="template-section">
+            <button class="template-btn" onclick="downloadTemplate()">
+                <span class="icon">⬇️</span>
+                Download CSV Template
+            </button>
+            <p class="template-help">Use this template to ensure your CSV matches the required feature format.</p>
+        </div>
+        <div class="alert alert-info py-2 small mb-2" role="alert">
+            <strong>Note:</strong> Analysis time may vary based on the volume of data. (Approx 7-10 minutes)
+        </div>
+
+        <div class="dropzone" id="dropzone">
+            <div class="icon">📂</div>
+            <h4>Drop your CSV file here</h4>
+            <p>or click to browse</p>
+            <input type="file" id="fileInput" accept=".csv">
+        </div>
+
+        <div class="file-info" id="fileInfo">
+            <div>
+                <span class="filename" id="filename"></span>
+                <span class="text-muted ms-2" id="filesize"></span>
+            </div>
+            <button class="remove-btn" id="removeBtn" title="Remove file">×</button>
+        </div>
+
+        <button class="analyze-btn" id="analyzeBtn" disabled>Analyze CSV</button>
+
+        <div class="progress-container" id="progressContainer">
+            <div class="progress">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+                    style="width: 100%">
+                    Analyzing...
+
+                </div>
+            </div>
+        </div>
+
+        <div class="status-message" id="statusMessage"></div>
+
+        <!-- Results Container with Download Buttons -->
+        <div class="results-container" id="resultsContainer">
+            <div class="results-header">
+                <h3>✅ Analysis Complete</h3>
+            </div>
+
+            <div class="results-stats">
+                <div class="stat-card">
+                    <div class="number" id="totalFlows">0</div>
+                    <div class="label">Total Flows</div>
+                </div>
+                <div class="stat-card anomalies">
+                    <div class="number" id="anomalyCount">0</div>
+                    <div class="label">Anomalies</div>
+                </div>
+                <div class="stat-card normal">
+                    <div class="number" id="normalCount">0</div>
+                    <div class="label">Normal</div>
+                </div>
+            </div>
+
+            <div class="download-buttons">
+                <button class="download-btn csv" id="downloadCSVBtn">
+                    <span class="icon">📊</span>
+                    Download CSV Results
+                </button>
+                <button class="download-btn waf" id="downloadWAFBtn" style="display: none;">
+                    <span class="icon">🛡️</span>
+                    Download Recommended WAF Rules (JSON)
+                </button>
+            </div>
+
+            <div class="analyze-another">
+                <button id="analyzeAnotherBtn">Analyze Another File</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const filename = document.getElementById('filename');
+        const filesize = document.getElementById('filesize');
+        const removeBtn = document.getElementById('removeBtn');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const statusMessage = document.getElementById('statusMessage');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const downloadCSVBtn = document.getElementById('downloadCSVBtn');
+        const downloadWAFBtn = document.getElementById('downloadWAFBtn');
+        const analyzeAnotherBtn = document.getElementById('analyzeAnotherBtn');
+        const totalFlows = document.getElementById('totalFlows');
+        const anomalyCount = document.getElementById('anomalyCount');
+        const normalCount = document.getElementById('normalCount');
+
+        let selectedFile = null;
+        let currentCacheKey = null;
+
+        // Click to browse
+        dropzone.addEventListener('click', () => fileInput.click());
+
+        // Drag and drop handlers
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('dragover');
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        // Remove file
+        removeBtn.addEventListener('click', () => {
+            selectedFile = null;
+            fileInput.value = '';
+            fileInfo.classList.remove('show');
+            analyzeBtn.disabled = true;
+            statusMessage.classList.remove('show');
+            resultsContainer.classList.remove('show');
+        });
+
+        // Analyze button
+        analyzeBtn.addEventListener('click', analyzeCSV);
+
+        // Download CSV button
+        downloadCSVBtn.addEventListener('click', () => {
+            if (currentCacheKey) {
+                window.location.href = `/download_analyzed_csv/${currentCacheKey}`;
+            }
+        });
+
+        // Download WAF Rules button
+        downloadWAFBtn.addEventListener('click', () => {
+            if (currentCacheKey) {
+                window.location.href = `/download_waf_rules/${currentCacheKey}`;
+            }
+        });
+
+        // Analyze Another button
+        analyzeAnotherBtn.addEventListener('click', () => {
+            selectedFile = null;
+            currentCacheKey = null;
+            fileInput.value = '';
+            fileInfo.classList.remove('show');
+            analyzeBtn.disabled = true;
+            statusMessage.classList.remove('show');
+            resultsContainer.classList.remove('show');
+        });
+
+        // Download template function
+        function downloadTemplate() {
+            window.location.href = '/download_csv_template';
+        }
+
+        function handleFile(file) {
+            if (!file.name.endsWith('.csv')) {
+                showStatus('Please select a CSV file', 'error');
+                return;
+            }
+
+            selectedFile = file;
+            filename.textContent = file.name;
+            filesize.textContent = formatFileSize(file.size);
+            fileInfo.classList.add('show');
+            analyzeBtn.disabled = false;
+            statusMessage.classList.remove('show');
+            resultsContainer.classList.remove('show');
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        async function analyzeCSV() {
+            if (!selectedFile) return;
+
+            analyzeBtn.disabled = true;
+            progressContainer.classList.add('show');
+            statusMessage.classList.remove('show');
+            resultsContainer.classList.remove('show');
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                const response = await fetch('/analyze_csv', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                progressContainer.classList.remove('show');
+
+                if (response.ok) {
+                    const result = await response.json();
+
+                    // Store cache key for downloads
+                    currentCacheKey = result.cache_key;
+
+                    // Update stats
+                    totalFlows.textContent = result.total_flows;
+                    anomalyCount.textContent = result.anomaly_count;
+                    normalCount.textContent = result.normal_count;
+
+                    // Show/hide WAF button based on anomalies
+                    if (result.has_anomalies) {
+                        downloadWAFBtn.style.display = 'inline-flex';
+                    } else {
+                        downloadWAFBtn.style.display = 'none';
+                    }
+
+                    // Show results container
+                    resultsContainer.classList.add('show');
+
+                    showStatus('✓ Analysis complete! Choose a download option below.', 'success');
+                } else {
+                    const contentType = response.headers.get('content-type') || '';
+                    let message = 'Unknown error';
+
+                    if (contentType.includes('application/json')) {
+                        const error = await response.json();
+                        message = error.error || JSON.stringify(error);
+                    } else {
+                        const text = await response.text();
+                        message = text ? text.slice(0, 300) : message;
+                    }
+
+                    showStatus('Analysis failed: ' + message, 'error');
+                }
+            } catch (error) {
+                progressContainer.classList.remove('show');
+                showStatus('Analysis failed: ' + error.message, 'error');
+            }
+
+            analyzeBtn.disabled = false;
+        }
+
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = 'status-message show ' + type;
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

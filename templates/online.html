@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ZeroTrace-X – Anomaly Detection</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --accent-primary: #3b82f6;
+            --accent-danger: #ef4444;
+            --accent-success: #10b981;
+            --text-main: #f8fafc;
+            --text-secondary: #94a3b8;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+        }
+
+        /* Navbar */
+        .navbar {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: white !important;
+        }
+
+        .brand-highlight {
+            color: var(--accent-primary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-success);
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+        }
+
+        /* Cards & Containers */
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+        }
+
+        .card-title {
+            color: white;
+            font-weight: 600;
+        }
+
+        .form-label {
+            color: var(--text-secondary);
+        }
+
+        .form-control,
+        .form-select {
+            background-color: #0f172a;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            background-color: #0f172a;
+            color: white;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
+        }
+
+        .form-control::placeholder {
+            color: #64748b;
+        }
+
+        /* Nav Tabs */
+        .nav-tabs {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-tabs .nav-link {
+            color: var(--text-secondary);
+            border: none;
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
+        }
+
+        .nav-tabs .nav-link:hover {
+            color: white;
+            border-color: transparent;
+        }
+
+        .nav-tabs .nav-link.active {
+            background-color: transparent;
+            color: var(--accent-primary);
+            border-bottom: 2px solid var(--accent-primary);
+        }
+
+        /* Tables */
+        .log-table-container {
+            max-height: 60vh;
+            overflow-y: auto;
+            overflow-x: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            background-color: var(--bg-card);
+        }
+
+        .table {
+            --bs-table-bg: transparent;
+            --bs-table-color: var(--text-secondary);
+            --bs-table-border-color: rgba(255, 255, 255, 0.05);
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            color: white;
+            background-color: #020617;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-weight: 600;
+        }
+
+        .log-pinned {
+            background-color: rgba(255, 193, 7, 0.1) !important;
+            border-left: 4px solid #ffc107;
+        }
+
+        /* Severity Colors */
+        .severity-CRITICAL {
+            color: #fca5a5;
+            font-weight: bold;
+            background: rgba(139, 0, 0, 0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .severity-HIGH {
+            color: #ef4444;
+            font-weight: bold;
+        }
+
+        .severity-MEDIUM {
+            color: #f59e0b;
+            font-weight: bold;
+        }
+
+        .severity-LOW {
+            color: #10b981;
+            font-weight: bold;
+        }
+
+        .log-ANOMALY {
+            background-color: rgba(239, 68, 68, 0.1) !important;
+        }
+
+        .log-NORMAL {
+            background-color: transparent !important;
+        }
+
+        .log-ALERT {
+            background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+
+        .log-ALLOW {
+            background-color: transparent !important;
+        }
+
+        .log-LEARNING {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            z-index: 1050;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content-custom {
+            background: var(--bg-card);
+            color: var(--text-main);
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            font-size: 24px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: white;
+        }
+
+        /* Badge */
+        .model-metadata-badge {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.85rem;
+        }
+
+        /* Alerts */
+        .alert-info {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-color: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+        }
+
+        .log-count-badge {
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        .toast-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-card);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            display: none;
+            border-left: 4px solid var(--accent-success);
+        }
+    </style>
+</head>
+
+<body class="container-fluid p-0">
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand" href="/">ZeroTrace<span class="brand-highlight">-X</span></a>
+            <div class="d-flex align-items-center">
+                <span class="text-secondary small me-3"><span class="status-dot"></span>Live Monitoring</span>
+                <a href="/" class="btn btn-sm btn-outline-secondary">← Back to Home</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-end mb-4">
+            <div>
+                <h3 class="mb-1 text-white">Network Anomaly Detection</h3>
+                <p class="text-secondary mb-0">Real-time packet analysis & ML inference engine</p>
+            </div>
+            <!-- Model Metadata Badge -->
+            <div id="modelMetadataBadge" class="model-metadata-badge">
+                <strong>Models:</strong> <span id="modelSummary">H: v?, I: v?, L: status</span>
+            </div>
+        </div>
+
+        <!-- TABS -->
+        <ul class="nav nav-tabs mb-3">
+            <li class="nav-item">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#logs">Realtime Logs</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#alerts">Alerts</button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+
+            <!-- ================= REALTIME LOGS ================= -->
+            <div class="tab-pane fade show active" id="logs">
+                <!-- System Status Banner -->
+                <div class="d-flex align-items-center mb-3">
+                    <div class="alert alert-info mb-0 w-100" role="alert">
+                        <strong>Automated Network Anomaly Detection (Live Baseline)</strong>
+                        <p class="mb-0 small">System continuously learns your network behavior and alerts on deviations
+                            using a three-model decision engine (Home, Industrial, Live).</p>
+                    </div>
+                </div>
+
+                <!-- Log Filters -->
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title">Filters</h6>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Severity</label>
+                                <select id="filterSeverity" class="form-select form-select-sm">
+                                    <option value="ALL">ALL</option>
+                                    <option value="CRITICAL">CRITICAL</option>
+                                    <option value="HIGH">HIGH</option>
+                                    <option value="MEDIUM">MEDIUM</option>
+                                    <option value="LOW">LOW</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Decision</label>
+                                <select id="filterPrediction" class="form-select form-select-sm">
+                                    <option value="ALL">ALL</option>
+                                    <option value="ALERT">ALERT</option>
+                                    <option value="ALLOW">ALLOW</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Source IP</label>
+                                <input type="text" id="filterSrcIP" class="form-control form-control-sm"
+                                    placeholder="e.g. 192.168.1.100">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Destination IP</label>
+                                <input type="text" id="filterDstIP" class="form-control form-control-sm"
+                                    placeholder="e.g. 10.0.0.1">
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-primary" onclick="applyFilters()">Apply Filters</button>
+                            <button class="btn btn-sm btn-secondary" onclick="clearFilters()">Clear</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Log Count Indicator -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="log-count-badge" id="logCountBadge">
+                        Logs Displayed: <span id="logCount">0</span>
+                    </div>
+                    <div class="alert alert-info py-2 small mb-2" role="alert">
+                        <strong>Note:</strong> logs may take a few seconds to appear as they are processed in real-time.
+                    </div>
+                    <button class="btn btn-sm btn-secondary" onclick="scrollToTop()">↑ Back to Latest</button>
+                </div>
+
+                <!-- Fixed Height Scrollable Log Container -->
+                <div class="log-table-container" id="logTableContainer">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Source</th>
+                                <th>Destination</th>
+                                <th>Protocol</th>
+                                <th>Decision</th>
+                                <th>Severity</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ================= ALERTS ================= -->
+            <div class="tab-pane fade" id="alerts">
+
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Source</th>
+                            <th>Destination</th>
+                            <th>Severity</th>
+                            <th>Score</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="alerts-body"></tbody>
+                </table>
+            </div>
+
+            </table>
+        </div>
+
+    </div>
+    </div> <!-- End Main Container -->
+
+    <!-- Alert Details Modal -->
+    <div id="alertModal" class="modal-overlay" onclick="closeModalOnOutside(event)">
+        <div class="modal-content-custom" onclick="event.stopPropagation()">
+            <span class="modal-close" onclick="closeAlertModal()">&times;</span>
+            <div id="modal-body-content"></div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastNotification" class="toast-notification"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        let cachedAlerts = {};
+        let allLogs = []; // Store all fetched logs for filtering
+        let displayedLogs = []; // Store currently displayed logs
+        let currentFilter = {
+            severity: 'ALL',
+            prediction: 'ALL',
+            srcIP: '',
+            dstIP: ''
+        };
+        let lastLogTimestamp = null; // Track last log to prevent duplicates
+        let isUserScrolled = false; // Track if user manually scrolled up
+        const MAX_UI_LOGS = 500; // Keep only latest 500 logs in UI to prevent lag
+
+        // Setup event listeners on load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Setup filter event listeners
+            document.getElementById('filterSeverity')?.addEventListener('change', applyFilters);
+            document.getElementById('filterPrediction')?.addEventListener('change', applyFilters);
+
+            // Setup scroll listener to detect user scrolling
+            const logContainer = document.getElementById('logTableContainer');
+            if (logContainer) {
+                logContainer.addEventListener('scroll', () => {
+                    const { scrollTop } = logContainer;
+                    // User is at top if scrollTop is within 50px of 0
+                    isUserScrolled = scrollTop > 50;
+                });
+            }
+        });
+
+        // Update model metadata badge
+        function updateModelMetadata(metadata) {
+            if (!metadata) return;
+            const h = metadata.home || {};
+            const i = metadata.industrial || {};
+            const l = metadata.live || {};
+            const summary = `H: ${h.version || 'v?'} | I: ${i.version || 'v?'} | L: ${l.status || l.version || 'N/A'}`;
+            const el = document.getElementById('modelSummary');
+            if (el) el.textContent = summary;
+        }
+
+        // Fetch logs + alerts
+        function fetchData() {
+            const url = `/captured_data`;
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    // Update model metadata from first item
+                    if (data.length > 0 && data[0].model_metadata) {
+                        updateModelMetadata(data[0].model_metadata);
+                    }
+
+                    // Append only new logs (those with timestamps > lastLogTimestamp)
+                    let newLogs = data;
+                    if (lastLogTimestamp) {
+                        newLogs = data.filter(log => log.timestamp > lastLogTimestamp);
+                    }
+
+                    if (newLogs.length > 0) {
+                        // Update last timestamp
+                        lastLogTimestamp = data[data.length - 1].timestamp;
+
+                        // Append new logs to allLogs
+                        allLogs = [...allLogs, ...newLogs];
+
+                        // Keep only latest MAX_UI_LOGS to prevent UI lag
+                        // Trim from the START (oldest) to keep only the newest logs
+                        if (allLogs.length > MAX_UI_LOGS) {
+                            allLogs = allLogs.slice(-MAX_UI_LOGS); // Keep last MAX_UI_LOGS entries
+                            console.log(`[i] Trimmed logs to ${MAX_UI_LOGS} (removed oldest logs)`);
+                        }
+
+                        // Render with append mode
+                        renderLogs(allLogs, newLogs);
+                    }
+                })
+                .catch(err => console.error('Fetch error:', err));
+        }
+
+        function renderLogs(allData, newData = null) {
+            const body = document.getElementById("logs-body");
+            const container = document.getElementById('logTableContainer');
+
+            // If filters changed or first load, re-render everything
+            if (!newData) {
+                body.innerHTML = "";
+                displayedLogs = [];
+            }
+
+            // Determine which data to render
+            const dataToRender = newData || allData;
+
+            // Apply filters
+            let filteredData = dataToRender.filter(row => {
+                if (currentFilter.severity !== 'ALL' && row.severity !== currentFilter.severity) return false;
+                if (currentFilter.prediction !== 'ALL' && row.final_decision !== currentFilter.prediction) return false;
+                if (currentFilter.srcIP && !row.src_ip.includes(currentFilter.srcIP)) return false;
+                if (currentFilter.dstIP && !row.dst_ip.includes(currentFilter.dstIP)) return false;
+                return true;
+            });
+
+            // If appending new logs, prepend them to the TOP (newest first)
+            if (newData) {
+                // Reverse order so newest appears first, then prepend
+                filteredData.reverse().forEach(row => renderLogRow(row, body, false, true));
+                displayedLogs = [...filteredData, ...displayedLogs];
+            } else {
+                // Full re-render (filters changed)
+                body.innerHTML = "";
+                displayedLogs = [];
+
+                // Apply filters to all logs
+                let allFiltered = allData.filter(row => {
+                    if (currentFilter.severity !== 'ALL' && row.severity !== currentFilter.severity) return false;
+                    if (currentFilter.prediction !== 'ALL' && row.final_decision !== currentFilter.prediction) return false;
+                    if (currentFilter.srcIP && !row.src_ip.includes(currentFilter.srcIP)) return false;
+                    if (currentFilter.dstIP && !row.dst_ip.includes(currentFilter.dstIP)) return false;
+                    return true;
+                });
+
+                // Reverse order for newest first display
+                allFiltered.reverse();
+
+                // Render all filtered rows
+                allFiltered.forEach(row => renderLogRow(row, body, false, false));
+
+                displayedLogs = allFiltered;
+            }
+
+            // Update log count
+            document.getElementById('logCount').textContent = displayedLogs.length;
+
+            // Smart scrolling: stay at top if user hasn't scrolled down
+            if (!isUserScrolled && newData && newData.length > 0) {
+                scrollToTop();
+            }
+        }
+
+        function renderLogRow(row, body, isPinned, prepend = false) {
+            const tr = document.createElement("tr");
+            // Apply red background for ALERT rows
+            tr.className = "log-" + (row.final_decision || 'ALLOW');
+            if (isPinned) tr.className += " log-pinned";
+
+            tr.innerHTML = `
+        <td>${row.timestamp}</td>
+        <td>${row.src_ip}</td>
+        <td>${row.dst_ip}</td>
+        <td>${row.protocol}</td>
+        <td>${row.final_decision || '-'}</td>
+        <td class="severity-${row.severity || "LOW"}">${row.severity || "-"}</td>
+    `;
+
+            if (prepend && body.firstChild) {
+                body.insertBefore(tr, body.firstChild);
+            } else {
+                body.appendChild(tr);
+            }
+        }
+
+        function renderAlerts() {
+            const body = document.getElementById("alerts-body");
+
+            // Fetch alerts from dedicated persistent storage endpoint
+            fetch('/alerts_data')
+                .then(response => response.json())
+                .then(alerts => {
+                    if (!alerts || alerts.length === 0) {
+                        if (body.children.length > 0 && body.children[0].textContent.includes('No alerts')) return;
+                        body.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No alerts detected yet</td></tr>';
+                        cachedAlerts = {};
+                        return;
+                    }
+
+                    // Sort by severity: HIGH > MEDIUM > LOW
+                    alerts.sort((a, b) => severityRank(b.severity) - severityRank(a.severity));
+
+                    // Check if data changed (use timestamp + src_ip + dst_ip as unique key)
+                    const alertKey = a => `${a.timestamp}_${a.src_ip}_${a.dst_ip}`;
+                    const currentKeys = Object.values(cachedAlerts).map(alertKey);
+                    const newKeys = alerts.map(alertKey);
+
+                    const hasChanged = currentKeys.length !== newKeys.length ||
+                        !currentKeys.every(k => newKeys.includes(k));
+
+                    // Only re-render if alerts actually changed
+                    if (hasChanged) {
+                        body.innerHTML = "";
+                        cachedAlerts = {};
+
+                        // Render alert rows
+                        alerts.forEach((alert, idx) => {
+                            alert.id = idx;
+                            cachedAlerts[idx] = alert;
+
+                            const tr = document.createElement("tr");
+                            tr.innerHTML = `
+                        <td>${alert.timestamp}</td>
+                        <td>${alert.src_ip}</td>
+                        <td>${alert.dst_ip}</td>
+                        <td class="severity-${alert.severity}">${alert.severity}</td>
+                        <td>${displayScore(alert)}</td>
+                       <td class="d-flex gap-1">
+        <button class="btn btn-sm btn-primary" onclick="openDetails(${idx})">
+            Investigate 🔍
+        </button>
+
+                    `;
+                            body.appendChild(tr);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to fetch alerts:', error);
+                    if (!body.innerHTML.includes('Failed to load')) {
+                        body.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Failed to load alerts</td></tr>';
+                    }
+                });
+        }
+
+
+        function openDetails(id) {
+            const alert = cachedAlerts[id];
+            const modalBody = document.getElementById("modal-body-content");
+            const modal = document.getElementById('alertModal');
+
+            // Store alert data in modal for button access (survives cachedAlerts rebuild)
+            modal.dataset.alertData = JSON.stringify(alert);
+
+            // Pattern Detection Display
+            let patternHTML = '';
+            if (alert.rule_recommendation && alert.rule_recommendation.pattern) {
+                const pattern = alert.rule_recommendation.pattern;
+                const patternLabels = {
+                    'REPEATED_PAIR': '🔄 Repeated Pair Attack',
+                    'SRC_SCAN': '🔍 Port/Network Scan',
+                    'BURST': '💥 Traffic Burst',
+                    'API_ABUSE': '🔌 API Abuse',
+                    'FALSE_POSITIVE_PATTERN': '✓ Known Safe Pattern',
+                    'Anomalous Behavior': '❓ Potential ZeroDay'
+                };
+                const patternLabel = patternLabels[pattern] || `⚠️ ${pattern}`;
+
+                patternHTML = `
+                    <div class="p-3 mb-3 rounded" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);">
+                        <strong style="color: #adb5bd;">Detection Pattern:</strong> <span style="color: #f43f5e;">${patternLabel}</span>
+                    </div>
+                `;
+            }
+
+            // Feature Deviations Display
+            let explainabilityHTML = '';
+            if (alert.explainability && alert.explainability.top_deviations && alert.explainability.top_deviations.length > 0) {
+                explainabilityHTML = `
+            <h6>Top Feature Deviations</h6>
+            <ul style="margin-bottom: 1rem;">
+                ${alert.explainability.top_deviations.map(d => `<li><code>${d}</code></li>`).join('')}
+            </ul>
+        `;
+            }
+
+            // WAF Rule Recommendation Display
+            let ruleHTML = '';
+            if (alert.rule_recommendation) {
+                const rule = alert.rule_recommendation;
+
+                // Parse scope information
+                let scopeDisplay = '';
+                let scopeType = '';
+                if (rule.scope) {
+                    if (rule.scope.type === 'SRC_DST_PAIR') {
+                        scopeDisplay = `${rule.scope.src_ip} → ${rule.scope.dst_ip}`;
+                        scopeType = 'Source-Destination Pair';
+                    } else if (rule.scope.type === 'SOURCE_IP') {
+                        scopeDisplay = rule.scope.value || alert.src_ip;
+                        scopeType = 'Source IP';
+                    } else if (rule.scope.type === 'ENDPOINT') {
+                        scopeDisplay = rule.scope.value;
+                        scopeType = 'Endpoint';
+                    } else {
+                        scopeDisplay = rule.scope.value || alert.src_ip;
+                        scopeType = rule.scope.type;
+                    }
+                }
+
+                // Get duration and threshold from conditions
+                const duration = rule.conditions?.duration_seconds || 'N/A';
+                const threshold = rule.conditions?.threshold || null;
+
+                ruleHTML = `
+            <h6>Recommended Action</h6>
+            <div class="alert alert-warning" style="background: #fff3cd; border-left: 4px solid #ffc107;">
+                <strong>Action:</strong> <span class="badge bg-danger">${rule.action}</span><br>
+                <strong>Target (${scopeType}):</strong> <code>${scopeDisplay}</code><br>
+                <strong>Duration:</strong> ${duration}s
+                ${threshold ? `<br><strong>Threshold:</strong> ${threshold}` : ''}
+                <br><strong>Reason:</strong> ${rule.reason}
+            </div>
+        `;
+            }
+
+            const scores = alert.scores || { home: alert.score || 0, industrial: 0, live: 0 };
+            const votes = alert.model_votes || {};
+
+            // Premium UI Construction
+            modalBody.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="mb-0 fw-bold text-white">Anomaly Details</h5>
+                    <span class="severity-${alert.severity} px-3 py-1 rounded-pill" style="font-size: 0.9rem; letter-spacing: 0.5px;">${alert.severity}</span>
+                </div>
+
+                <!-- Core Info Grid -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="p-3 rounded" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);">
+                            <small class="text-uppercase d-block mb-2" style="font-size: 0.7rem; color: #adb5bd;">Traffic Flow</small>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="font-monospace" style="color: #f43f5e !important;">${alert.src_ip}</span>
+                                <span style="color: #f43f5e;">→</span>
+                                <span class="font-monospace" style="color: #f43f5e !important;">${alert.dst_ip}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded h-100" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <small class="text-uppercase d-block mb-1" style="font-size: 0.7rem; color: #adb5bd;">Protocol</small>
+                                    <span class="fw-bold" style="color: #f43f5e;">${alert.protocol}</span>
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-uppercase d-block mb-1" style="font-size: 0.7rem; color: #adb5bd;">Time</small>
+                                    <span class="small" style="color: #f43f5e;">${alert.timestamp.split('T')[1]?.split('.')[0] || alert.timestamp}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scores Section -->
+                <div class="mb-4">
+                     <small class="text-secondary text-uppercase d-block mb-2" style="font-size: 0.7rem;">ML Confidence Scores</small>
+                     <div class="d-flex gap-2">
+                        <span class="badge ${Math.abs(scores.home) > 0.5 ? 'bg-danger' : 'bg-dark'} border border-secondary text-white">Home: ${scores.home?.toFixed(3)}</span>
+                        <span class="badge ${Math.abs(scores.industrial) > 0.5 ? 'bg-danger' : 'bg-dark'} border border-secondary text-white">Ind: ${scores.industrial?.toFixed(3)}</span>
+                        <span class="badge ${Math.abs(scores.live) > 0.5 ? 'bg-danger' : 'bg-dark'} border border-secondary text-white">Live: ${scores.live?.toFixed(3)}</span>
+                     </div>
+                </div>
+
+                <!-- Details Sections -->
+                ${patternHTML}
+                ${explainabilityHTML}
+                ${ruleHTML}
+
+                <hr style="border-color: rgba(255,255,255,0.1);">
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-secondary"><i class="bi bi-info-circle"></i> ID: ${alert.id || 'N/A'}</small>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-danger" onclick="exportWAFRuleFromModal()">
+                             🛡 View WAF Rule
+                        </button>
+                        <button class="btn btn-sm btn-outline-warning" onclick="markFalsePositiveFromModal()">
+                             ✓ Mark False Positive
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            modal.style.display = 'flex';
+        }
+
+        function closeAlertModal() {
+            document.getElementById('alertModal').style.display = 'none';
+        }
+
+        function closeModalOnOutside(event) {
+            if (event.target.id === 'alertModal') {
+                closeAlertModal();
+            }
+        }
+
+        // WAF Rule functions
+        function copyRuleToClipboard(rule) {
+            try {
+                const jsonStr = JSON.stringify(rule, null, 2);
+                navigator.clipboard.writeText(jsonStr).then(() => {
+                    showToast('WAF rule copied to clipboard!');
+                }).catch(err => {
+                    console.error('Failed to copy:', err);
+                    showToast('Failed to copy to clipboard', 'error');
+                });
+            } catch (err) {
+                console.error('Error copying rule:', err);
+                showToast('Error copying rule', 'error');
+            }
+        }
+
+        function downloadRuleJSON(rule, srcIP, dstIP) {
+            try {
+                const dataStr = JSON.stringify(rule, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = window.URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `waf_rule_${srcIP}_${dstIP}_${new Date().getTime()}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+                showToast('WAF rule downloaded!');
+            } catch (err) {
+                console.error('Error downloading rule:', err);
+                showToast('Failed to download WAF rule', 'error');
+            }
+        }
+
+        // Investigation functions
+        function getModalAlert() {
+            const modal = document.getElementById('alertModal');
+            if (modal && modal.dataset.alertData) {
+                try {
+                    return JSON.parse(modal.dataset.alertData);
+                } catch (e) {
+                    console.error('Failed to parse modal alert data:', e);
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        function exportWAFRuleFromModal() {
+            const alert = getModalAlert();
+            if (!alert) {
+                showToast("Alert data not found", "error");
+                return;
+            }
+
+            fetch('/generate_waf_rule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(alert)
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.rule) {
+                        showToast("Failed to generate WAF rule", "error");
+                        return;
+                    }
+
+                    const json = JSON.stringify(data.rule, null, 2);
+
+                    const modalBody = document.getElementById("modal-body-content");
+                    modalBody.innerHTML = `
+            <h5>Recommended WAF Rule</h5>
+            <p class="text-muted">
+                Behaviour-aware rule generated by ZeroTrace-X engine
+            </p>
+
+            <pre style="background:#111;color:#0f0;padding:15px;border-radius:8px;max-height:50vh;overflow:auto;">
+${json}
+            </pre>
+
+            <div class="mt-2 d-flex gap-2">
+                <button class="btn btn-sm btn-primary"
+                    onclick='copyRuleToClipboard(${JSON.stringify(data.rule).replace(/'/g, "\\'")})'>
+                    📋 Copy to Clipboard
+                </button>
+                <button class="btn btn-sm btn-success"
+                    onclick='downloadRuleJSON(${JSON.stringify(data.rule).replace(/'/g, "\\'")}, "${alert.src_ip}", "${alert.dst_ip}")'>
+                    ⬇️ Download JSON
+                </button>
+            </div>
+        `;
+                })
+                .catch(() => showToast("WAF engine error", "error"));
+        }
+
+        function exportWAFRule(alertId) {
+            const alert = cachedAlerts[alertId];
+
+            fetch('/generate_waf_rule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(alert)
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.rule) {
+                        showToast("Failed to generate WAF rule", "error");
+                        return;
+                    }
+
+                    const json = JSON.stringify(data.rule, null, 2);
+                    const alert = cachedAlerts[alertId];
+
+                    const modalBody = document.getElementById("modal-body-content");
+                    modalBody.innerHTML = `
+            <h5>Generated WAF Rule (Dynamic)</h5>
+            <p class="text-muted">
+                Behaviour-aware rule generated by ZeroTrace-X engine
+            </p>
+
+            <pre style="background:#111;color:#0f0;padding:15px;border-radius:8px;max-height:50vh;overflow:auto;">
+${json}
+            </pre>
+
+            <div class="mt-2 d-flex gap-2">
+                <button class="btn btn-sm btn-primary"
+                    onclick='copyRuleToClipboard(${JSON.stringify(data.rule).replace(/'/g, "\\'")})'>
+                    📋 Copy to Clipboard
+                </button>
+                <button class="btn btn-sm btn-success"
+                    onclick='downloadRuleJSON(${JSON.stringify(data.rule).replace(/'/g, "\\'")}, "${alert.src_ip}", "${alert.dst_ip}")'>
+                    ⬇️ Download JSON
+                </button>
+            </div>
+        `;
+                })
+                .catch(() => showToast("WAF engine error", "error"));
+        }
+
+        // Filter functions
+        function applyFilters() {
+            currentFilter.severity = document.getElementById('filterSeverity').value;
+            currentFilter.prediction = document.getElementById('filterPrediction').value;
+            currentFilter.srcIP = document.getElementById('filterSrcIP').value.trim();
+            currentFilter.dstIP = document.getElementById('filterDstIP').value.trim();
+            renderLogs(allLogs); // Full re-render with filters
+        }
+
+        function clearFilters() {
+            currentFilter = { severity: 'ALL', prediction: 'ALL', srcIP: '', dstIP: '' };
+            document.getElementById('filterSeverity').value = 'ALL';
+            document.getElementById('filterPrediction').value = 'ALL';
+            document.getElementById('filterSrcIP').value = '';
+            document.getElementById('filterDstIP').value = '';
+            renderLogs(allLogs); // Full re-render
+            showToast('Filters cleared');
+        }
+
+        // Scroll to top helper (where newest logs are)
+        function scrollToTop() {
+            const container = document.getElementById('logTableContainer');
+            if (container) {
+                container.scrollTop = 0;
+                isUserScrolled = false;
+            }
+        }
+
+        // False positive marking
+        function markFalsePositiveFromModal() {
+            const alert = getModalAlert();
+            if (!alert) {
+                showToast("Alert data not found", "error");
+                return;
+            }
+            closeAlertModal();
+            markFalsePositive(alert);
+        }
+
+        function markFalsePositive(row) {
+            const payload = {
+                src_ip: row.src_ip,
+                dst_ip: row.dst_ip,
+                protocol: row.protocol,
+                timestamp: row.timestamp
+            };
+
+            fetch('/mark_false_positive', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showToast('✓ Marked as False Positive (Baseline Updated)');
+                        renderAlerts();
+                    } else {
+                        showToast('Failed to mark false positive', 'error');
+                    }
+                })
+                .catch(() => showToast('Error marking false positive', 'error'));
+        }
+
+
+        // Toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toastNotification');
+            toast.textContent = message;
+            toast.style.background = type === 'error' ? '#dc3545' : '#28a745';
+            toast.style.display = 'block';
+
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+
+        function severityRank(s) {
+            if (s === "CRITICAL") return 4;
+            if (s === "HIGH") return 3;
+            if (s === "MEDIUM") return 2;
+            return 1;
+        }
+
+        function displayScore(row) {
+            const scores = row.scores || {};
+            if (typeof scores.live === 'number') return scores.live;
+            if (typeof scores.home === 'number' && typeof scores.industrial === 'number') return Math.min(scores.home, scores.industrial);
+            return row.score || 0;
+        }
+
+        // Auto refresh
+        setInterval(fetchData, 3000);
+        setInterval(renderAlerts, 5000); // Refresh alerts every 5 seconds from persistent storage
+        fetchData();
+        renderAlerts(); // Initial load of alerts
+    </script>
+
+</body>
+
+</html>

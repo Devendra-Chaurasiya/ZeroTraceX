@@ -1,0 +1,220 @@
+# 🛡️ ZeroTrace-X – ML-Driven Network Anomaly Detection
+
+ZeroTrace-X is a **machine learning–based network anomaly detection system** designed for **future integration with Web Application Firewalls (WAFs)**.
+It supports both **real-time network monitoring** and **offline log analysis**, providing **explainable alerts**, **severity-based prioritization**, and **administrator-approved security rule recommendations**.
+
+---
+
+## 🚀 Key Features
+
+* 🔴 Real-time network traffic analysis
+* 📁 Offline log / CSV-based analysis
+* 🧠 ML-based behavioural anomaly detection
+* 📊 Severity-based alert prioritization
+* 🔍 Explainable alerts with feature-level deviations
+* 🔐 WAF rule recommendations in JSON format
+* 🧑‍💻 Administrator feedback via false-positive handling
+* 🔁 Continuous baseline learning
+
+---
+
+## ⚙️ Setup, Installation & Running (Windows)
+
+### 1️⃣ Navigate to the project folder
+
+```powershell
+cd ZeroTrace-X
+```
+
+---
+
+### 2️⃣ Create a Python virtual environment
+
+```powershell
+python -m venv venv
+```
+
+---
+
+### 3️⃣ Activate the virtual environment
+
+```powershell
+venv\Scripts\Activate.ps1
+```
+
+> If PowerShell blocks script execution:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+---
+
+### 4️⃣ Install required dependencies
+
+```powershell
+pip install -r .\requirements.txt
+```
+
+---
+
+### 5️⃣ Start ZeroTrace-X 
+
+```powershell
+python .\app.py
+```
+
+Or using Flask CLI:
+
+```powershell
+flask --app app run --debug
+```
+
+### 📁Real-Time Analysis
+
+* Capture live network traffic
+* Learn normal behaviour baselines
+* Detect anomalies in real time
+* Display alerts with explainability in the UI
+* Allow investigation, false-positive marking, and WAF rule recommendations
+
+---
+
+### 📁 Offline Analysis
+
+* Open **Offline Analysis** from the application UI
+* Upload supported log / CSV files
+* Perform batch anomaly detection
+* View severity-wise results
+* Download:
+
+  * 📊 Analysis results (CSV)
+  * 🔐 Recommended WAF rules (JSON)
+
+---
+
+## 🧠 Explainability
+
+For each detected anomaly, ZeroTrace-X provides:
+
+* Detection decision and severity
+* Model outputs and confidence
+* **Top feature deviations explaining why the traffic was flagged**
+* Recommended security action
+
+This ensures alerts are **transparent, auditable, and easy to understand**.
+
+---
+
+## 🔐 WAF Rule Recommendation
+
+* Rules are generated in **WAF-agnostic JSON format**
+* Rules are **not auto-enforced**
+* Designed for **future WAF integration**
+* Administrator review and approval is required before deployment
+
+---
+
+## 🔁 Continuous Learning
+
+* Alerts marked as **False Positive**:
+
+  * Are removed from active alerts
+  * Are incorporated into baseline learning
+* Helps reduce false positives and improve detection accuracy over time
+
+---
+
+## � Project Structure
+
+```
+ZeroTrace-X/
+├── 📄 app.py                           (Main Flask application)
+├── 📄 predict.py                       (ML prediction engine)
+├── 📄 flow_tracker.py                  (Network flow tracking)
+├── 📄 requirements.txt                 (Python dependencies)
+├── 📄 Readme                           (This file)
+│
+├── 📁 data/                            (Persistent data storage)
+│   ├── alerts_store.json               (Alert records)
+│   └── logs_store.json                 (Log records)
+│
+├── 📁 ml/models/                       (ML model artifacts)
+│   ├── 📁 home/                        (Home network model)
+│   │   ├── home_iforest.pkl            (Isolation Forest model)
+│   │   ├── home_scaler.pkl             (StandardScaler for preprocessing)
+│   │   ├── home_threshold.json         (Anomaly threshold)
+│   │   ├── home_feature_order.txt      (Feature names)
+│   │   └── (other model files)
+│   │
+│   ├── 📁 industrial/                  (Industrial network model)
+│   │   ├── isolation_forest.pkl        (Isolation Forest model)
+│   │   ├── scaler.pkl                  (StandardScaler for preprocessing)
+│   │   ├── threshold.json              (Anomaly threshold)
+│   │   ├── feature_order.txt           (27 features)
+│   │   └── (other model files)
+│   │
+│   └── 📁 live/                        (Runtime-trained adaptive baseline)
+│       ├── live_iforest.pkl            (Trained model)
+│       ├── live_scaler.pkl             (Preprocessor)
+│       ├── live_metadata.json          (Training stats)
+│       └── live_baseline_buffer.csv    (Training buffer)
+│
+├── 📁 training/                        (Model training scripts)
+│   ├── 📁 home_network/                (Home network training pipeline)
+│   │   ├── step1.py                    (Data cleaning)
+│   │   ├── step2.py                    (Feature scaling)
+│   │   ├── step3.py                    (Model training)
+│   │   └── step4.py                    (Threshold calculation)
+│   │
+│   └── 📁 industrial_network/          (Industrial network training pipeline)
+│       ├── Step_1_Extract.py           (Data extraction)
+│       ├── Step_2_preprocess.py        (Preprocessing)
+│       ├── Step_3_train_iforest.py     (Model training)
+│       └── Step_4_threshold.py         (Threshold calculation)
+│
+├── 📁 templates/                       (Web UI templates)
+│   ├── index.html                      (Landing page)
+│   ├── online.html                     (Live monitoring dashboard)
+│   └── offline.html                    (CSV analysis interface)
+│
+└── 📁 venv/                            (Python virtual environment)
+```
+
+---
+
+## 🧠 Model Architecture
+
+ZeroTrace-X uses **three Isolation Forest models** for comprehensive anomaly detection:
+
+| Model | Purpose | Training Data | Features |
+|-------|---------|---------------|----------|
+| **Home** | Detect anomalies in home/small network traffic | home_flow_features.csv | 21 features |
+| **Industrial** | Detect anomalies in industrial network (CSECICIDS2018) | CSECICIDS2018 dataset | 27 features |
+| **Live Baseline** | Adaptive real-time baseline learning | Runtime collected flows | Dynamic feature set |
+
+**Severity Decision Logic:**
+- **CRITICAL**: All 3 models detect anomaly OR anomaly score < threshold × 2.0
+- **HIGH**: 2+ models detect anomaly
+- **MEDIUM**: 1 model detects anomaly  
+- **LOW**: Potential concern (borderline scores)
+
+---
+
+## 📝 Notes
+
+* Analysis time may vary depending on traffic volume or log size
+* Designed for demonstration and future extensibility
+* No direct production WAF enforcement in demo mode
+* Models are trained with Isolation Forest (contamination=0.01)
+* Live baseline automatically retrains every 500 new flows
+* Data persisted in JSON format for easy inspection and debugging
+
+---
+
+## 🏁 Conclusion
+
+ZeroTrace-X demonstrates how **machine learning can enhance network security** by combining **real-time anomaly detection**, **clear explainability**, and **safe, administrator-controlled rule recommendations** for future WAF integration.
+
+---
+
